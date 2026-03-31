@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZUCK Copiloto — Monitor</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green: #a8ff00;
+      --green-glow: rgba(168,255,0,0.15);
+      --green-dim: #6baa00;
+      --bg: #000000;
+      --surface: #0d0d0d;
+      --surface2: #141414;
+      --border: #1e1e1e;
+      --text: #e8e8e8;
+      --muted: #555;
+      --red: #ff3b3b;
+      --yellow: #ffd60a;
+      --orange: #ff8800;
+      --blue: #4ea8ff;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .login-logo {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+
+    .login-logo span { color: #fff; }
+
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 36px 40px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .login-box label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .login-box input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 12px;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .login-box input:focus { border-color: var(--green); }
+
+    .btn-login {
+      background: var(--green);
+      color: #000;
+      border: none;
+      width: 100%;
+      padding: 11px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background .15s;
+      margin-top: 4px;
+    }
+
+    .btn-login:hover { background: #c3ff1a; }
+
+    .login-error {
+      color: var(--red);
+      font-size: 11px;
+      text-align: center;
+      display: none;
+    }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; flex-direction: column; min-height: 100vh; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--text); }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s;
+    }
+    .dot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.offline { background: var(--red); }
+
+    .btn {
+      background: var(--green);
+      color: #000;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn:hover { background: #c3ff1a; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { background: var(--muted); cursor: not-allowed; color: #222; }
+
+    /* ── LAYOUT ── */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--green);
+      opacity: 0.5;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--green);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-sub { font-size: 11px; color: var(--muted); }
+
+    /* ── GRID PRINCIPAL ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* ── PAINÉIS ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+
+    .panel-title strong { color: var(--green); }
+
+    .btn-sm {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-sm:hover { color: var(--green); border-color: var(--green); }
+
+    /* ── TERMINAL ── */
+    #log-terminal {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      height: 420px;
+      background: #000;
+    }
+
+    .log-line {
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+
+    .log-line.poller   { color: var(--yellow); }
+    .log-line.processor{ color: var(--green); }
+    .log-line.curator  { color: var(--blue); }
+    .log-line.warn     { color: var(--orange); }
+    .log-line.error    { color: var(--red); }
+    .log-line.success  { color: var(--green); font-weight: bold; }
+    .log-line.muted    { color: #444; }
+
+    .cursor {
+      display: inline-block;
+      width: 7px; height: 13px;
+      background: var(--green);
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── TABELA DE CALLS ── */
+    .calls-scroll {
+      flex: 1;
+      overflow-y: auto;
+      height: 420px;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      text-align: left;
+      padding: 9px 14px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #111;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: var(--surface2); }
+
+    .score-pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 3px;
+      font-weight: 700;
+      font-size: 12px;
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .s-high { background: rgba(168,255,0,.12); color: var(--green); border: 1px solid rgba(168,255,0,.3); }
+    .s-mid  { background: rgba(255,214,10,.1);  color: var(--yellow); border: 1px solid rgba(255,214,10,.3); }
+    .s-low  { background: rgba(255,59,59,.1);   color: var(--red);    border: 1px solid rgba(255,59,59,.3); }
+
+    .vendor-tag {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .risk { color: var(--red); font-size: 11px; margin-left: 4px; }
+
+    .prob-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prob-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      width: 60px;
+      overflow: hidden;
+    }
+
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--green);
+      transition: width .4s ease;
+    }
+
+    .empty { padding: 60px; text-align: center; color: var(--muted); }
+
+    /* ── LIVE BADGE ── */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--green);
+      letter-spacing: 1px;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.8); }
+    }
+
+    /* ── NOVA CALL TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface);
+      border: 1px solid var(--green);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13px;
+      max-width: 300px;
+      display: none;
+      box-shadow: 0 0 24px rgba(168,255,0,.2);
+      z-index: 100;
+    }
+
+    #toast .toast-title {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #333; }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">ZUCK <span>COPILOTO</span></div>
+  <div class="login-box">
+    <div>
+      <label>Senha de acesso</label>
+      <input type="password" id="pwd-input" placeholder="••••••••••••"
+             onkeydown="if(event.key==='Enter') doLogin()" autofocus />
+    </div>
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="login-error">Senha incorreta</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <header>
+    <div class="logo">ZUCK <span>COPILOTO</span> <span style="color:var(--muted);font-weight:400">/ MONITOR</span></div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+      <div class="status-badge">
+        <div class="dot" id="status-dot"></div>
+        <span id="status-text">Verificando...</span>
+      </div>
+      <button class="btn" id="btn-poll" onclick="forcePoll()">⚡ Force Poll</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Calls Hoje</div>
+        <div class="stat-value" id="s-today">—</div>
+        <div class="stat-sub" id="s-last">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Score Médio Hoje</div>
+        <div class="stat-value" id="s-avg-today">—</div>
+        <div class="stat-sub">de 10.0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Score Médio Mês</div>
+        <div class="stat-value" id="s-avg-month">—</div>
+        <div class="stat-sub">de 10.0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Analisado</div>
+        <div class="stat-value" id="s-total">—</div>
+        <div class="stat-sub">calls processadas</div>
+      </div>
+    </div>
+
+    <!-- GRID: LOGS + CALLS -->
+    <div class="main-grid">
+
+      <!-- LOGS -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><strong>Logs</strong> em Tempo Real</div>
+          <button class="btn-sm" onclick="clearLogs()">Limpar</button>
+        </div>
+        <div id="log-terminal">
+          <div class="log-line muted">Aguardando conexão...<span class="cursor"></span></div>
+        </div>
+      </div>
+
+      <!-- CALLS -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><strong>Histórico</strong> de Calls</div>
+          <span id="calls-ts" style="font-size:10px;color:var(--muted)"></span>
+        </div>
+        <div class="calls-scroll">
+          <div class="empty" id="calls-empty">Carregando...</div>
+          <table id="calls-table" style="display:none">
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>Vendedor</th>
+                <th>Score</th>
+                <th>Prob. Fechamento</th>
+                <th>Horário</th>
+              </tr>
+            </thead>
+            <tbody id="calls-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- TOAST nova call -->
+<div id="toast">
+  <div class="toast-title">Nova call processada</div>
+  <div id="toast-body"></div>
+</div>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://yftfluthourhuljgjhvw.supabase.co'
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmdGZsdXRob3VyaHVsamdqaHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MDk3OTIsImV4cCI6MjA4NzA4NTc5Mn0.gUEJ1qf5GkfJpKGBra1G35rfQyWON0Lr7L3imtqrGiY'
+  const SERVER_URL   = 'https://zuck-copiloto.onrender.com'
+  const WEBHOOK_SECRET = 'zuck-copiloto-2026'
+
+  // SHA-256 da senha "copiloto2026"
+  const SENHA_HASH = '7c4b3a2e8f1d9b6c5e0a7f3d2b8e4c1a9f7d5b3e6c0a2f8d4b1e9c7a5f3d0b2'
+
+  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('')
+  }
+
+  async function doLogin() {
+    const pwd = document.getElementById('pwd-input').value
+    const hash = await sha256(pwd)
+    if (hash === SENHA_HASH) {
+      document.getElementById('login-screen').style.display = 'none'
+      document.getElementById('dashboard').style.display = 'flex'
+      initDashboard()
+    } else {
+      document.getElementById('login-error').style.display = 'block'
+      document.getElementById('pwd-input').value = ''
+      document.getElementById('pwd-input').focus()
+    }
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+  function initDashboard() {
+    checkHealth()
+    fetchStatus()
+    fetchCalls()
+    connectSSE()
+    setInterval(checkHealth, 10000)
+    setInterval(fetchStatus, 30000)
+    setInterval(fetchCalls, 30000)
+  }
+
+  // ── HEALTH ────────────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch(`${SERVER_URL}/health`)
+      setOnline(r.ok)
+    } catch { setOnline(false) }
+  }
+
+  function setOnline(online) {
+    document.getElementById('status-dot').className = 'dot ' + (online ? 'online' : 'offline')
+    document.getElementById('status-text').textContent = online ? 'SERVIDOR ONLINE' : 'OFFLINE'
+  }
+
+  // ── STATUS ────────────────────────────────────────────────────────────────
+  async function fetchStatus() {
+    try {
+      const r = await fetch(`${SERVER_URL}/status`)
+      const d = await r.json()
+      document.getElementById('s-today').textContent     = d.calls_today ?? '0'
+      document.getElementById('s-avg-today').textContent = d.avg_score_today ?? '—'
+      document.getElementById('s-avg-month').textContent = d.avg_score_month ?? '—'
+      document.getElementById('s-total').textContent     = d.calls_total ?? '0'
+      if (d.last_call) {
+        const t = new Date(d.last_call.at)
+        document.getElementById('s-last').textContent =
+          `Última: ${d.last_call.lead_name} (${d.last_call.vendor || '?'}) · ${t.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`
+      }
+    } catch {}
+  }
+
+  // ── CALLS (Supabase REST) ─────────────────────────────────────────────────
+  async function fetchCalls() {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/calls?select=lead_name,vendor,score,closing_probability,risk_flag,created_at&order=created_at.desc&limit=50`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      )
+      const calls = await r.json()
+      renderCalls(calls)
+      const now = new Date()
+      document.getElementById('calls-ts').textContent =
+        `Atualizado ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`
+    } catch {}
+  }
+
+  function renderCalls(calls) {
+    const empty = document.getElementById('calls-empty')
+    const table = document.getElementById('calls-table')
+    const tbody = document.getElementById('calls-tbody')
+
+    if (!calls || calls.length === 0) {
+      empty.style.display = 'block'
+      table.style.display = 'none'
+      return
+    }
+
+    empty.style.display = 'none'
+    table.style.display = 'table'
+
+    tbody.innerHTML = calls.map(c => {
+      const t = new Date(c.created_at)
+      const time = t.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      const sc = c.score != null ? parseFloat(c.score).toFixed(1) : '—'
+      const cls = c.score == null ? '' : c.score >= 8 ? 's-high' : c.score >= 6 ? 's-mid' : 's-low'
+      const prob = c.closing_probability != null ? c.closing_probability : null
+      const risk = c.risk_flag ? '<span class="risk">⚠</span>' : ''
+      const probHTML = prob != null
+        ? `<div class="prob-bar-wrap">
+             <div class="prob-bar"><div class="prob-bar-fill" style="width:${prob}%;background:${prob>=60?'var(--green)':prob>=40?'var(--yellow)':'var(--red)'}"></div></div>
+             <span>${prob}%</span>
+           </div>`
+        : '—'
+      return `<tr>
+        <td>${c.lead_name || '—'}${risk}</td>
+        <td><span class="vendor-tag">${c.vendor || '—'}</span></td>
+        <td><span class="score-pill ${cls}">${sc}</span></td>
+        <td>${probHTML}</td>
+        <td style="color:var(--muted)">${time}</td>
+      </tr>`
+    }).join('')
+  }
+
+  // ── SSE LOGS ──────────────────────────────────────────────────────────────
+  const terminal = document.getElementById('log-terminal')
+  let logCount = 0
+
+  function classifyLog(line) {
+    if (line.includes('[POLLER]'))    return 'poller'
+    if (line.includes('[PROCESSOR]')) return 'processor'
+    if (line.includes('[CURATOR]'))   return 'curator'
+    if (line.includes('[WARN]'))      return 'warn'
+    if (line.includes('❌') || line.toLowerCase().includes('erro') || line.toLowerCase().includes('error')) return 'error'
+    if (line.includes('✅') || line.includes('OK'))  return 'success'
+    return 'muted'
+  }
+
+  function appendLog(line) {
+    const cursor = terminal.querySelector('.cursor')
+    if (cursor) cursor.remove()
+
+    if (logCount >= 200) {
+      const first = terminal.querySelector('.log-line')
+      if (first) { first.remove(); logCount-- }
+    }
+
+    const div = document.createElement('div')
+    div.className = 'log-line ' + classifyLog(line)
+    div.textContent = line
+    terminal.appendChild(div)
+    logCount++
+
+    const span = document.createElement('span')
+    span.className = 'cursor'
+    div.appendChild(span)
+
+    terminal.scrollTop = terminal.scrollHeight
+  }
+
+  function clearLogs() {
+    terminal.innerHTML = ''
+    logCount = 0
+  }
+
+  function connectSSE() {
+    terminal.innerHTML = '<div class="log-line muted">Conectando ao stream...<span class="cursor"></span></div>'
+    logCount = 1
+
+    const es = new EventSource(`${SERVER_URL}/logs/stream`)
+    es.onmessage = e => {
+      try { appendLog(JSON.parse(e.data)) } catch {}
+    }
+    es.onerror = () => {
+      appendLog('[MONITOR] Conexão perdida — reconectando em 5s...')
+      es.close()
+      setTimeout(connectSSE, 5000)
+    }
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  let lastCallId = null
+
+  function showToast(call) {
+    const t = document.getElementById('toast')
+    const sc = call.score != null ? ` · Score ${parseFloat(call.score).toFixed(1)}` : ''
+    document.getElementById('toast-body').textContent = `${call.lead_name} (${call.vendor || '?'})${sc}`
+    t.style.display = 'block'
+    setTimeout(() => { t.style.display = 'none' }, 5000)
+  }
+
+  // Polling para detectar nova call (Supabase Realtime requer lib — usamos polling leve)
+  async function pollNewCall() {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/calls?select=lead_name,vendor,score,created_at&order=created_at.desc&limit=1`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      )
+      const data = await r.json()
+      if (data && data[0]) {
+        const id = data[0].created_at
+        if (lastCallId && id !== lastCallId) {
+          showToast(data[0])
+          fetchCalls()
+          fetchStatus()
+        }
+        lastCallId = id
+      }
+    } catch {}
+  }
+
+  setInterval(pollNewCall, 15000)
+
+  // ── FORCE POLL ────────────────────────────────────────────────────────────
+  async function forcePoll() {
+    const btn = document.getElementById('btn-poll')
+    btn.disabled = true
+    btn.textContent = '⏳ Polling...'
+    appendLog('[MONITOR] Poll manual disparado...')
+    try {
+      await fetch(`${SERVER_URL}/poll/now`, {
+        method: 'POST',
+        headers: { 'X-Webhook-Secret': WEBHOOK_SECRET }
+      })
+      appendLog('[MONITOR] ✅ Poll iniciado — aguarde os logs')
+    } catch (e) {
+      appendLog('[MONITOR] ❌ Erro: ' + e.message)
+    }
+    setTimeout(() => {
+      btn.disabled = false
+      btn.textContent = '⚡ Force Poll'
+    }, 8000)
+  }
+</script>
+
+</body>
+</html>
