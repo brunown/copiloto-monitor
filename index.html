@@ -328,22 +328,8 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-logo">ZUCK <span>COPILOTO</span></div>
-  <div class="login-box">
-    <div>
-      <label>Senha de acesso</label>
-      <input type="password" id="pwd-input" placeholder="••••••••••••"
-             onkeydown="if(event.key==='Enter') doLogin()" autofocus />
-    </div>
-    <button class="btn-login" onclick="doLogin()">Entrar</button>
-    <div class="login-error" id="login-error">Senha incorreta</div>
-  </div>
-</div>
-
 <!-- DASHBOARD -->
-<div id="dashboard">
+<div id="dashboard" style="display:flex">
   <header>
     <div class="logo">ZUCK <span>COPILOTO / MONITOR</span></div>
     <div class="header-right">
@@ -467,27 +453,10 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmdGZsdXRob3VyaHVsamdqaHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MDk3OTIsImV4cCI6MjA4NzA4NTc5Mn0.gUEJ1qf5GkfJpKGBra1G35rfQyWON0Lr7L3imtqrGiY'
   const SERVER      = 'https://zuck-copiloto.onrender.com'
   const SECRET      = 'zuck-copiloto-2026'
-  const SENHA_HASH  = 'da0a80a2cd805b52e89736bf041b31f09e73680b3d0decbc69382ae6827906de'
+
   const TEST_NAMES  = ['kadmo', 'fabricio', 'fabricio lima', 'teste', 'test']
 
   // ── LOGIN ───────────────────────────────────────────────────────────────────
-  async function sha256(s) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')
-  }
-
-  async function doLogin() {
-    const pwd = document.getElementById('pwd-input').value
-    if (await sha256(pwd) === SENHA_HASH) {
-      document.getElementById('login-screen').style.display = 'none'
-      document.getElementById('dashboard').style.display = 'flex'
-      initDashboard()
-    } else {
-      document.getElementById('login-error').style.display = 'block'
-      document.getElementById('pwd-input').value = ''
-    }
-  }
-
   // ── INIT ────────────────────────────────────────────────────────────────────
   function initDashboard() {
     checkHealth(); fetchStatus(); fetchCalls(); connectSSE()
@@ -844,6 +813,9 @@
     } catch (e) { addTimelineItem('[MONITOR] ❌ Erro ao disparar poll') }
     setTimeout(() => { btn.disabled = false; btn.textContent = '⚡ Force Poll' }, 8000)
   }
+
+  // Auto-init sem login
+  initDashboard()
 </script>
 </body>
 </html>
